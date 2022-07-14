@@ -5,7 +5,8 @@ import os
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
-
+import time
+from datetime import date
 
 data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 fig_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "figs")
@@ -14,25 +15,58 @@ def simulate_spk_train(N=100, Nt=1000000, save=True):
     spk_train = SPK(N=N, Nt=Nt, dt=0.05, p=0.3, weight_factor=0.9)
     spk_train.simulate_poisson()
     if save:
-        with open(os.path.join(data_path, f"spk_train_{N}.pickle"), "wb") as f:
+        with open(os.path.join(data_path, f"spk_train_{N}_{Nt}.pickle"), "wb") as f:
             pickle.dump(spk_train, f)
     return spk_train
 
 
-def load_spk_train(N=100):
-    with open(os.path.join(data_path, f"spk_train_{N}.pickle"), "rb") as f:
+def load_spk_train(N, Nt):
+    with open(os.path.join(data_path, f"spk_train_{N}_{Nt}.pickle"), "rb") as f:
         spk_train = pickle.load(f)
     return spk_train
 
 
-def infer_J_ij(spk_train, i, j, observed_neurons=range(1), with_basis=False):
-    mle = MLE(filter_length=100, dt=0.1, observed=observed_neurons, tau=1)
+def infer_J_ij(spk_train, i, j, basis_order=[0, 1, 2], observed_neurons=range(1), data_percent=1, with_basis=False, save=True):
+    mle = MLE(filter_length=100, dt=0.1, basis_order=basis_order, observed=observed_neurons, tau=1)
     # mle.plot_inferred(spike_train=spk_train.spike_train, W_true=spk_train.weight_matrix,
     #                   ylim=0.3, basis_free_infer=True, savefig=False, figname='')
+    Nt = int(spk_train.shape[0] * data_percent)
+    print(f"inferring with {Nt} data and {len(observed_neurons)} observed neurons with basis order {basis_order}...")
+    start_time = time.time()
     if with_basis:
-        return mle.infer_J_ij_basis(i, j, spike_train=spk_train)
+        inferred = mle.infer_J_ij_basis(i, j, spike_train=spk_train[:Nt,:])
     else:
-        return mle.infer_J_ij(i, j, spike_train=spk_train)
+        inferred =  mle.infer_J_ij(i, j, spike_train=spk_train)
+    total_time = time.time()-start_time
+    print(f"Time took for MLE {total_time:.2f} s")
+    if save:
+        file_path = os.path.join(data_path, f"{date.today()}")
+        os.makedirs(file_path, exist_ok=True)
+        np.savetxt(os.path.join(file_path, f"{len(basis_order)}_basis_{len(observed_neurons)}_observed_{Nt}_data.txt"), inferred)
+    return inferred
+
+
+def cov_estimate(spk_train, N_i, N_j, max_t_steps=100, data_percent=1, norm=True, save=True):
+    Nt = int(spk_train.shape[0] * data_percent)
+    print(f"correlation estimation with {Nt} data...")
+    start_time = time.time()
+    normalized_spk_train_1 = spk_train[:Nt, N_i]-np.mean(spk_train[:, N_i])
+    normalized_spk_train_2 = spk_train[:Nt, N_j]-np.mean(spk_train[:, N_j])
+    if norm:
+        normalization = (np.std(normalized_spk_train_1)
+                            * np.std(normalized_spk_train_2))
+    else:
+        normalization = 1
+    cross_correlation = np.array([np.mean([normalized_spk_train_1[t]*normalized_spk_train_2[t+dt] for t in range(len(normalized_spk_train_1)-max_t_steps)])
+                                    for dt in range(max_t_steps)])/normalization
+    total_time = time.time()-start_time  
+    print(f"Time took for MLE {total_time:.2f} s")
+    if save:
+        file_path = os.path.join(data_path, f"{date.today()}")
+        os.makedirs(file_path, exist_ok=True)
+        np.savetxt(os.path.join(file_path, f"correlation_{Nt}_data.txt"), cross_correlation)
+    
+    return cross_correlation
 
 
 if __name__ == "__main__":
@@ -45,17 +79,22 @@ if __name__ == "__main__":
 
     # step 1: simulate spike train or load existing spk_train data
     if args.rerun:
-        spk_train = simulate_spk_train(N=100)
+        spk_train = simulate_spk_train(N=128, Nt=2000000)
     else:
-        spk_train = load_spk_train(N=100)
+        spk_train = load_spk_train(N=128, Nt=2000000)
         # np.savetxt(os.path.join(data_path, f"spk_train_weights_{100}.txt"), spk_train.weight_matrix)
         # spk_train.simulate_poisson(Nt=2000000)
+    # print(spk_train.spike_train.shape)
 
     # step 2: infer neuron connection between pairs of observed neurons
-    for n_observed in [2, 5, 10, 20, 50, 100]:
-        J_01 = infer_J_ij(spk_train.spike_train, 0, 1, observed_neurons=range(n_observed), with_basis=True)
+    # for data in [0.2, 0.4, 0.6, 0.8, 1]:
+    for data in [0.02, 0.04, 0.06, 0.08, 0.1, 0.2, 0.4, 0.6, 0.8, 1]:
+        # for n_observed in [2**i for i in range(1)]:
+        J_11 = infer_J_ij(spk_train.spike_train, 1, 1, basis_order=[1], observed_neurons=range(128), with_basis=True, data_percent=data)
+            # cov_00 = spk_train.plot_correlation(0, 0, 100)
+        # cov_00 = cov_estimate(spk_train.spike_train, 0, 0, data_percent=data)
         # J_10 = infer_J_ij(spk_train.spike_train, 1, 0)
-        np.savetxt(os.path.join(data_path, f"J01_no_basis_{n_observed}.txt"), J_01)
+        
     # np.savetxt(os.path.join(data_path, "J10.txt"), J_10)
 
         # plt.scatter(range(len(J_00)), J_00)

@@ -168,8 +168,7 @@ class Spike_train:
     def plot_raster(self, t_window=None, ll=0.5, savefig=False):
         import matplotlib.pyplot as plt
         from matplotlib.ticker import MaxNLocator
-        if t_window:
-            def binary_search(spk_time, target):
+        def binary_search(spk_time, target):
                 cutoff = []
                 for times in spk_time:
                     l, r = 0, len(times)-1
@@ -181,9 +180,16 @@ class Spike_train:
                             l = mid + 1
                     cutoff.append(l)
                 return cutoff
-
-            cutoff = binary_search(self.spike_time, t_window)
-            spk_time = [self.spike_time[i][:cutoff[i]] for i in range(self.N)]
+        if isinstance(t_window, list) and len(t_window) == 2:
+            print(t_window)
+            cutoff_start = binary_search(self.spike_time, t_window[0])
+            cutoff_end = binary_search(self.spike_time, t_window[1])
+            print(cutoff_start)
+            print(cutoff_end)
+            spk_time = [self.spike_time[i][cutoff_start[i]:cutoff_end[i]] for i in range(self.N)]
+        elif isinstance(t_window, int):
+            cutoff_end = binary_search(self.spike_time, t_window)
+            spk_time = [self.spike_time[i][:cutoff_end[i]] for i in range(self.N)]
         else:
             spk_time = self.spike_time
         ax = plt.subplot()
