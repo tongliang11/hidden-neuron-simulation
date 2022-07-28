@@ -56,24 +56,39 @@ class Maximum_likelihood_estimator:
             a*np.log(i+c)-phi, -np.pi), np.pi))+1)/2 for i in np.linspace(0, 50, 50)])
         return rcos
 
-    def design_matrix(self, spike_train):
-        spk_train_padding = np.vstack(
-            (np.zeros((self.filter_length, len(self.observed))), spike_train[:, self.observed]))
-        full_design = np.hstack(np.array([hankel(
-            spk_train_padding[:, i][:-self.filter_length], spk_train_padding[:, i][-self.filter_length-1:-1]) for i in range(len(self.observed))]))
+    def design_matrix(self, spike_train, exclude_self=False, to_neuron=None):
+        if not exclude_self:
+            spk_train_padding = np.vstack(
+                (np.zeros((self.filter_length, len(self.observed))), spike_train[:, self.observed]))
+            full_design = np.hstack(np.array([hankel(
+                spk_train_padding[:, i][:-self.filter_length], spk_train_padding[:, i][-self.filter_length-1:-1]) for i in range(len(self.observed))]))
+        else:
+            spk_train_padding = np.vstack(
+                (np.zeros((self.filter_length, len(self.observed)-1)), spike_train[:, [obs for obs in self.observed if obs != to_neuron]]))
+            full_design = np.hstack(np.array([hankel(
+                spk_train_padding[:, i][:-self.filter_length], spk_train_padding[:, i][-self.filter_length-1:-1]) for i in range(len(self.observed)-1)]))
+
         return full_design
 
-    def fit_basis(self, spike_train, to_neuron, basis):
+    def fit_basis(self, spike_train, to_neuron, basis, tol=1e-4):
         diag_basis = block_diag(*[basis for _ in range(len(self.observed))])
         design_with_basis = self.design_matrix(spike_train) @ diag_basis
         sklearnm = TweedieRegressor(
-            power=1, alpha=self.alpha, max_iter=200000, link='log', tol=1e-8, fit_intercept=True)
+            power=1, alpha=self.alpha, max_iter=200000, link='log', tol=tol, fit_intercept=True)
         sklearnm.fit(X=design_with_basis, y=spike_train[:, to_neuron])
         return (sklearnm, basis)
 
-    def fit_basis_free(self, spike_train, to_neuron):
+    def fit_basis_no_self_coupling(self, spike_train, to_neuron, basis, tol=1e-4):
+        diag_basis = block_diag(*[basis for _ in range(len(self.observed)-1)])
+        design_with_basis = self.design_matrix(spike_train, exclude_self=True, to_neuron=to_neuron) @ diag_basis
         sklearnm = TweedieRegressor(
-            power=1, alpha=self.alpha, max_iter=200000, link='log', tol=1e-8, fit_intercept=True)
+            power=1, alpha=self.alpha, max_iter=200000, link='log', tol=tol, fit_intercept=True)
+        sklearnm.fit(X=design_with_basis, y=spike_train[:, to_neuron])
+        return (sklearnm, basis)
+
+    def fit_basis_free(self, spike_train, to_neuron, tol=1e-4):
+        sklearnm = TweedieRegressor(
+            power=1, alpha=self.alpha, max_iter=200000, link='log', tol=tol, fit_intercept=True)
         sklearnm.fit(X=self.design_matrix(spike_train),
                      y=spike_train[:, to_neuron])
         return sklearnm
@@ -82,13 +97,23 @@ class Maximum_likelihood_estimator:
         return self.fit_basis_free(spike_train, j).coef_[
                         i*self.filter_length:i*self.filter_length+self.filter_length][::-1]
 
-    def infer_J_ij_basis(self, i, j, spike_train):
+    def infer_J_ij_basis(self, i, j, spike_train, tol=1e-4, exclude_self_coupling=False):
         # return self.fit_basis_free(spike_train, j).coef_[
         #                 i*self.filter_length:i*self.filter_length+self.filter_length][::-1]
-        fitted_with_basis, basis = self.fit_basis(
-                    spike_train, to_neuron=self.observed[j], basis=self.alpha_basis())
-        return (basis@fitted_with_basis.coef_[i*len(self.basis_order):i*len(self.basis_order)+len(
-                    self.basis_order)])[::-1]
+        if not exclude_self_coupling:
+            fitted_with_basis, basis = self.fit_basis(
+                        spike_train, to_neuron=self.observed[j], basis=self.alpha_basis(), tol=tol)
+            return (basis@fitted_with_basis.coef_[i*len(self.basis_order):i*len(self.basis_order)+len(
+                        self.basis_order)])[::-1], fitted_with_basis.hess
+        else:
+            fitted_with_basis, basis = self.fit_basis_no_self_coupling(
+                        spike_train, to_neuron=self.observed[j], basis=self.alpha_basis(), tol=tol)
+            if i == j:
+                return [0]*len(basis), None, None
+            elif i > j:
+                i -= 1
+            return (basis@fitted_with_basis.coef_[i*len(self.basis_order):i*len(self.basis_order)+len(
+                        self.basis_order)])[::-1], fitted_with_basis.hess, fitted_with_basis.intercept_
 
     def plot_inferred(self, spike_train, W_true, ylim=0.3, basis_free_infer=True, basis_type='alpha', legend=True, savefig=False, figname='Fig'):
         fig, axs = plt.subplots(len(self.observed), len(
