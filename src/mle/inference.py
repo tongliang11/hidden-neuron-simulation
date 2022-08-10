@@ -104,7 +104,8 @@ class Maximum_likelihood_estimator:
             fitted_with_basis, basis = self.fit_basis(
                         spike_train, to_neuron=self.observed[j], basis=self.alpha_basis(), tol=tol)
             return (basis@fitted_with_basis.coef_[i*len(self.basis_order):i*len(self.basis_order)+len(
-                        self.basis_order)])[::-1], fitted_with_basis.hess
+                        self.basis_order)])[::-1], fitted_with_basis.hess, fitted_with_basis.intercept_
+            # return fitted_with_basis
         else:
             fitted_with_basis, basis = self.fit_basis_no_self_coupling(
                         spike_train, to_neuron=self.observed[j], basis=self.alpha_basis(), tol=tol)
@@ -112,6 +113,7 @@ class Maximum_likelihood_estimator:
                 return [0]*len(basis), None, None
             elif i > j:
                 i -= 1
+            # return fitted_with_basis
             return (basis@fitted_with_basis.coef_[i*len(self.basis_order):i*len(self.basis_order)+len(
                         self.basis_order)])[::-1], fitted_with_basis.hess, fitted_with_basis.intercept_
 
