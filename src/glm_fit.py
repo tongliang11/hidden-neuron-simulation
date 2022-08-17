@@ -27,17 +27,17 @@ def y_pred_likelihood_derivative(coef, X, y, weights):
 
 
 def neg_loglikelihood(coef, X, y, weights):
-        y_pred, deri = y_pred_likelihood_derivative(
-            coef, X, y, weights)
-        dev = family.deviance(y, y_pred, weights)
-        nlll = np.sum(y_pred - y * np.log(y_pred))
-        # offset if coef[0] is intercept
-        offset = 1 if self.fit_intercept else 0
-        coef_scaled = alpha * coef[offset:]
-        obj = 0.5 * dev + 0.5 * (coef[offset:] @ coef_scaled)
-        objp = 0.5 * devp
-        objp[offset:] += coef_scaled
-        return obj, objp
+    y_pred, deri = y_pred_likelihood_derivative(
+        coef, X, y, weights)
+    dev = family.deviance(y, y_pred, weights)
+    nlll = np.sum(y_pred - y * np.log(y_pred))
+    # offset if coef[0] is intercept
+    offset = 1 if self.fit_intercept else 0
+    coef_scaled = alpha * coef[offset:]
+    obj = 0.5 * dev + 0.5 * (coef[offset:] @ coef_scaled)
+    objp = 0.5 * devp
+    objp[offset:] += coef_scaled
+    return obj, objp
 
 args = (X, y, weights, self.alpha, family, link)
 

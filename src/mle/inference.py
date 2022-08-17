@@ -117,6 +117,17 @@ class Maximum_likelihood_estimator:
             return (basis@fitted_with_basis.coef_[i*len(self.basis_order):i*len(self.basis_order)+len(
                         self.basis_order)])[::-1], fitted_with_basis.hess, fitted_with_basis.intercept_
 
+
+    def infer_weight_matrix(self, spike_train, tol=1e-4):
+        weight_matrix = []
+        for j in range(len(self.observed)):
+            fitted_with_basis, basis = self.fit_basis(
+                        spike_train, to_neuron=self.observed[j], basis=self.alpha_basis(), tol=tol)
+            weight_matrix.append(fitted_with_basis.coef_)
+            print(f"{j}-th neuron weights inferred:", fitted_with_basis.coef_)
+        return weight_matrix
+
+
     def plot_inferred(self, spike_train, W_true, ylim=0.3, basis_free_infer=True, basis_type='alpha', legend=True, savefig=False, figname='Fig'):
         fig, axs = plt.subplots(len(self.observed), len(
             self.observed), figsize=(9, 9), dpi=150)
