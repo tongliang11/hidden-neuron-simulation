@@ -82,9 +82,9 @@ if __name__ == "__main__":
 
     # step 1: simulate spike train or load existing spk_train data
     if args.rerun:
-        spk_train = simulate_spk_train(N=128, Nt=1000000)
+        spk_train = simulate_spk_train(N=32, Nt=1000)
     else:
-        spk_train = load_spk_train(N=128, Nt=1000000)
+        spk_train = load_spk_train(N=32, Nt=1000)
         # np.savetxt(os.path.join(data_path, f"spk_train_weights_{100}.txt"), spk_train.weight_matrix)
         # spk_train.simulate_poisson(Nt=2000000)
     # print(spk_train.spike_train.shape)
@@ -100,12 +100,12 @@ if __name__ == "__main__":
             # cov_00 = spk_train.plot_correlation(0, 0, 100)
         # cov_00 = cov_estimate(spk_train.spike_train, 0, 0, data_percent=data)
         # J_10 = infer_J_ij(spk_train.spike_train, 1, 0)
-    n_observed = 128
-    # # for data in [0.02, 0.04, 0.06, 0.08, 0.1, 0.2, 0.4]:
-    for data in [0.1, 0.2, 0.4, 0.6, 0.8, 1]:
-        # J_00 = infer_J_ij(spk_train.spike_train, 0, 0, basis_order=[1], observed_neurons=range(n_observed), with_basis=True, tol=1e-5, exclude_self_copuling=True, data_percent=data, save=True)
-        J_01, J_01_intercept = infer_J_ij(spk_train.spike_train, 0, 1, basis_order=[1], observed_neurons=range(n_observed), with_basis=True, tol=1e-5, data_percent=data, exclude_self_copuling=False, save=True)
-        J_10, J_10_intercept = infer_J_ij(spk_train.spike_train, 1, 0, basis_order=[1], observed_neurons=range(n_observed), with_basis=True, tol=1e-5, data_percent=data, exclude_self_copuling=False, save=True)
+    # n_observed = 128
+    # # # for data in [0.02, 0.04, 0.06, 0.08, 0.1, 0.2, 0.4]:
+    # for data in [0.1, 0.2, 0.4, 0.6, 0.8, 1]:
+    #     # J_00 = infer_J_ij(spk_train.spike_train, 0, 0, basis_order=[1], observed_neurons=range(n_observed), with_basis=True, tol=1e-5, exclude_self_copuling=True, data_percent=data, save=True)
+    #     J_01, J_01_intercept = infer_J_ij(spk_train.spike_train, 0, 1, basis_order=[1], observed_neurons=range(n_observed), with_basis=True, tol=1e-5, data_percent=data, exclude_self_copuling=False, save=True)
+    #     J_10, J_10_intercept = infer_J_ij(spk_train.spike_train, 1, 0, basis_order=[1], observed_neurons=range(n_observed), with_basis=True, tol=1e-5, data_percent=data, exclude_self_copuling=False, save=True)
     # # # np.savetxt(os.path.join(data_path, "J10.txt"), J_10)
     #     print("J_01_intercept", J_01_intercept)
     #     print("J_10_intercept", J_10_intercept)
@@ -121,3 +121,6 @@ if __name__ == "__main__":
     # print("J00", J_00)
     # print("J10", J_10)
     # step 3: make plots
+    mle = MLE(filter_length=100, dt=0.1, basis_order=[1], observed=range(32), tau=1)
+    print("design matrix shape", mle.design_matrix(spk_train.spike_train, to_neuron=1).shape)
+    mle.test_nll(spk_train.spike_train, to_neuron=1)

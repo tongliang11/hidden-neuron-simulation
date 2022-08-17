@@ -26,18 +26,34 @@ def y_pred_likelihood_derivative(coef, X, y, weights):
 
 
 
-def neg_loglikelihood(coef, X, y, weights):
-        y_pred, deri = y_pred_likelihood_derivative(
-            coef, X, y, weights)
-        dev = family.deviance(y, y_pred, weights)
-        nlll = np.sum(y_pred - y * np.log(y_pred))
-        # offset if coef[0] is intercept
-        offset = 1 if self.fit_intercept else 0
-        coef_scaled = alpha * coef[offset:]
-        obj = 0.5 * dev + 0.5 * (coef[offset:] @ coef_scaled)
-        objp = 0.5 * devp
-        objp[offset:] += coef_scaled
-        return obj, objp
+def neg_loglikelihood(X, y, theta, mu):
+    """Calculate the negative log likelihood function, given design matrix X and target y for parameters theta
+    Args:
+        X (2d array):
+            X is the design matrix in shape (n_observations, filter_length * n_observed_neurons)
+        
+        y (1d array):
+            y is the target with shape (n_observations, )
+        
+        theta (1d array):
+            theta is the filter parameters with shape (filter_length, )
+        
+        mu (float):
+            baseline firing rate
+
+    Return:
+        negative log likelihood, gradient wrt each component of theta
+    
+    """
+    n_samples, n_features = X.shape
+    z = X @ theta
+    y_hat = np.exp(z + mu)
+    eps = np.spacing(1)
+    nlogL = - 1. / n_samples * np.sum(y * np.log(y_hat + eps) - y_hat)
+
+    grad = [np.sum((y_hat - y) * z[i]) for i in range(n_features)]
+
+    return nlogL, grad
 
 args = (X, y, weights, self.alpha, family, link)
 

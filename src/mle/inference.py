@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.linear_model import TweedieRegressor
 from scipy.linalg import block_diag, hankel
 import matplotlib.pyplot as plt
+import scipy
 import logging
 
 # to-do: fix dt=0.001 and filter_length problem
@@ -69,6 +70,68 @@ class Maximum_likelihood_estimator:
                 spk_train_padding[:, i][:-self.filter_length], spk_train_padding[:, i][-self.filter_length-1:-1]) for i in range(len(self.observed)-1)]))
 
         return full_design
+
+    def neg_loglikelihood(self, theta, X, y, mu):
+        """Calculate the negative log likelihood function, given design matrix X and target y for parameters theta
+        Args:
+            X (2d array):
+                X is the design matrix in shape (n_observations, filter_length * n_observed_neurons)
+            
+            y (1d array):
+                y is the target with shape (n_observations, )
+            
+            theta (1d array):
+                theta is the filter parameters with shape (filter_length, )
+            
+            mu (float):
+                    baseline firing rate
+
+        Return:
+            negative log likelihood, gradient wrt each component of theta
+        
+        """
+        n_samples, n_features = X.shape
+        z = X @ theta
+        y_hat = np.exp(z + mu)
+        eps = np.spacing(1)
+        nlogL = - 1. / n_samples * np.sum(y * np.log(y_hat + eps) - y_hat)
+        
+        print("y_hat shape", y_hat.shape)
+        grad = 1. / n_samples * np.array([np.sum((y_hat - y) * X[:, i]) for i in range(n_features)])
+
+        return nlogL, grad
+
+
+    def test_nll(self, spike_train, to_neuron, tol=1e-4):
+        basis = self.alpha_basis()
+        diag_basis = block_diag(*[basis for _ in range(len(self.observed))])
+        design_with_basis = self.design_matrix(spike_train) @ diag_basis
+        nll = self.neg_loglikelihood(X=design_with_basis, y=spike_train[:, to_neuron], theta=np.random.normal(0, 1, size=32), mu=0)
+        
+        opt_res = scipy.optimize.minimize(
+                self.neg_loglikelihood,
+                np.random.normal(0, 1, size=32),
+                method="L-BFGS-B",
+                jac=True,
+                options={
+                    "maxiter": 1000,
+                    "maxls": 50,  # default is 20
+                    "iprint": 0,
+                    "gtol": 1e-4,
+                    # The constant 64 was found empirically to pass the test suite.
+                    # The point is that ftol is very small, but a bit larger than
+                    # machine precision for float64, which is the dtype used by lbfgs.
+                    "ftol": 64 * np.finfo(float).eps,
+                },
+                args=(design_with_basis, spike_train[:, to_neuron], -1),
+            )
+        print("nll", nll)
+        # print("grad", grad)
+        print(opt_res)
+        # print(opt_res)
+        nll = self.neg_loglikelihood(X=design_with_basis, y=spike_train[:, to_neuron], theta=opt_res.x, mu=0)
+        
+        print("nll after minimization", nll)
 
     def fit_basis(self, spike_train, to_neuron, basis, tol=1e-4):
         diag_basis = block_diag(*[basis for _ in range(len(self.observed))])
