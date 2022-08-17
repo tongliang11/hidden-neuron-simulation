@@ -26,6 +26,7 @@ def y_pred_likelihood_derivative(coef, X, y, weights):
 
 
 
+<<<<<<< HEAD
 def neg_loglikelihood(X, y, theta, mu):
     """Calculate the negative log likelihood function, given design matrix X and target y for parameters theta
     Args:
@@ -54,6 +55,20 @@ def neg_loglikelihood(X, y, theta, mu):
     grad = [np.sum((y_hat - y) * z[i]) for i in range(n_features)]
 
     return nlogL, grad
+=======
+def neg_loglikelihood(coef, X, y, weights):
+    y_pred, deri = y_pred_likelihood_derivative(
+        coef, X, y, weights)
+    dev = family.deviance(y, y_pred, weights)
+    nlll = np.sum(y_pred - y * np.log(y_pred))
+    # offset if coef[0] is intercept
+    offset = 1 if self.fit_intercept else 0
+    coef_scaled = alpha * coef[offset:]
+    obj = 0.5 * dev + 0.5 * (coef[offset:] @ coef_scaled)
+    objp = 0.5 * devp
+    objp[offset:] += coef_scaled
+    return obj, objp
+>>>>>>> b19e53a348fac752d1b04e14af719befa297816b
 
 args = (X, y, weights, self.alpha, family, link)
 
