@@ -102,36 +102,51 @@ class Maximum_likelihood_estimator:
         return nlogL, grad
 
 
-    def test_nll(self, spike_train, to_neuron, tol=1e-4):
-        basis = self.alpha_basis()
-        diag_basis = block_diag(*[basis for _ in range(len(self.observed))])
-        design_with_basis = self.design_matrix(spike_train) @ diag_basis
-        nll = self.neg_loglikelihood(X=design_with_basis, y=spike_train[:, to_neuron], theta=np.random.normal(0, 1, size=32), mu=0)
+    def fit_nll(self, spike_train, to_neuron, fit_with_basis=True, fit_intercept=True, tol=1e-4):
+        
+        design_matrix = self.design_matrix(spike_train)
+        print('design shape', design_matrix.shape)
+        if fit_with_basis:
+            basis = self.alpha_basis()
+            diag_basis = block_diag(*[basis for _ in range(len(self.observed))])
+            design_matrix = design_matrix @ diag_basis
+            print('design_with_basis shape', design_matrix.shape)
+        
+        if fit_intercept:
+            design_matrix = np.hstack((design_matrix, np.ones(design_matrix.shape[0]).reshape(design_matrix.shape[0], 1)))
+
+        theta_inital = np.random.normal(0, 1, size=design_matrix.shape[1])
+        nll = self.neg_loglikelihood(X=design_matrix, y=spike_train[:, to_neuron], theta=theta_inital, mu=0)
         
         opt_res = scipy.optimize.minimize(
                 self.neg_loglikelihood,
-                np.random.normal(0, 1, size=32),
+                theta_inital,
                 method="L-BFGS-B",
                 jac=True,
                 options={
                     "maxiter": 1000,
                     "maxls": 50,  # default is 20
                     "iprint": 0,
-                    "gtol": 1e-4,
+                    "gtol": tol,
                     # The constant 64 was found empirically to pass the test suite.
                     # The point is that ftol is very small, but a bit larger than
                     # machine precision for float64, which is the dtype used by lbfgs.
                     "ftol": 64 * np.finfo(float).eps,
                 },
-                args=(design_with_basis, spike_train[:, to_neuron], -1),
+                args=(design_matrix, spike_train[:, to_neuron], -1),
             )
-        print("nll", nll)
+        print("initial nll", nll)
         # print("grad", grad)
         print(opt_res)
         # print(opt_res)
-        nll = self.neg_loglikelihood(X=design_with_basis, y=spike_train[:, to_neuron], theta=opt_res.x, mu=0)
+        nll = self.neg_loglikelihood(X=design_matrix, y=spike_train[:, to_neuron], theta=opt_res.x, mu=0)
         
         print("nll after minimization", nll)
+
+        if fit_intercept:
+            return opt_res.x[:-1], opt_res.x[-1]
+        else:
+            return opt_res.x, 0
 
     def fit_basis(self, spike_train, to_neuron, basis, tol=1e-4):
         diag_basis = block_diag(*[basis for _ in range(len(self.observed))])
