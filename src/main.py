@@ -98,8 +98,9 @@ if __name__ == "__main__":
     if args.rerun:
         spk_train = simulate_spk_train(N=128, Nt=100000)
     else:
-        spk_train = load_spk_train(N=128, Nt=10000)
+        spk_train = load_spk_train(N=128, Nt=200000)
 
+    # spk_train = spk_train[:20000,:]
         # np.savetxt(os.path.join(data_path, f"spk_train_weights_{100}.txt"), spk_train.weight_matrix)
         # spk_train.simulate_poisson(Nt=2000000)
     # print(spk_train.spike_train.shape)
@@ -142,8 +143,18 @@ if __name__ == "__main__":
     # print("J00", J_00)
     # print("J10", J_10)
     # step 3: make plots
+    start = time.time()
+    J_01, J_01_intercept = infer_J_ij(spk_train.spike_train[:20000,:], 1, 1, basis_order=[1], observed_neurons=range(128), with_basis=True, tol=1e-4, data_percent=1, exclude_self_copuling=False, save=False)
+    print("time for sklearn", time.time() - start)
+    
+    start = time.time()
     mle = MLE(filter_length=100, dt=0.1, basis_order=[1], observed=range(128), tau=1)
     # print("design matrix shape", mle.design_matrix(spk_train.spike_train, to_neuron=1).shape)
-    coef, intercept = mle.fit_nll(spk_train.spike_train, to_neuron=1)
-    print("coef shape, coef:", coef.shape, coef)
+    coef, intercept = mle.fit_nll(spk_train.spike_train[:20000,:], to_neuron=1, tol=1e-6, test_x=list(J_01)+[J_01_intercept])
+    print("time for nll", time.time() - start)
+    
+    print("coef shape, coef:", coef.shape, coef[:5])
     print('intercept', intercept)
+    print("J_01, intercept", J_01[:5], J_01_intercept)
+
+    

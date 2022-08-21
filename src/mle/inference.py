@@ -96,13 +96,13 @@ class Maximum_likelihood_estimator:
         eps = np.spacing(1)
         nlogL = - 1. / n_samples * np.sum(y * np.log(y_hat + eps) - y_hat)
         
-        print("y_hat shape", y_hat.shape)
+        # print("y_hat shape", y_hat.shape)
         grad = 1. / n_samples * np.array([np.sum((y_hat - y) * X[:, i]) for i in range(n_features)])
 
         return nlogL, grad
 
 
-    def fit_nll(self, spike_train, to_neuron, fit_with_basis=True, fit_intercept=True, tol=1e-4):
+    def fit_nll(self, spike_train, to_neuron, test_x=None, fit_with_basis=True, fit_intercept=True, tol=1e-4):
         
         design_matrix = self.design_matrix(spike_train)
         print('design shape', design_matrix.shape)
@@ -116,6 +116,7 @@ class Maximum_likelihood_estimator:
             design_matrix = np.hstack((design_matrix, np.ones(design_matrix.shape[0]).reshape(design_matrix.shape[0], 1)))
 
         theta_inital = np.random.normal(0, 1, size=design_matrix.shape[1])
+        theta_inital = test_x
         nll = self.neg_loglikelihood(X=design_matrix, y=spike_train[:, to_neuron], theta=theta_inital, mu=0)
         
         opt_res = scipy.optimize.minimize(
@@ -125,23 +126,26 @@ class Maximum_likelihood_estimator:
                 jac=True,
                 options={
                     "maxiter": 1000,
-                    "maxls": 50,  # default is 20
+                    # "maxls": 50,  # default is 20
                     "iprint": 0,
                     "gtol": tol,
                     # The constant 64 was found empirically to pass the test suite.
                     # The point is that ftol is very small, but a bit larger than
                     # machine precision for float64, which is the dtype used by lbfgs.
-                    "ftol": 64 * np.finfo(float).eps,
+                    "ftol": 1e3 * np.finfo(float).eps,
                 },
                 args=(design_matrix, spike_train[:, to_neuron], -1),
             )
-        print("initial nll", nll)
+        print("initial nll", nll[0])
         # print("grad", grad)
         print(opt_res)
         # print(opt_res)
+        n_iterations = self._check_optimize_result('lbfgs', opt_res)
         nll = self.neg_loglikelihood(X=design_matrix, y=spike_train[:, to_neuron], theta=opt_res.x, mu=0)
-        
+        print("nll niter", n_iterations)
         print("nll after minimization", nll)
+        if test_x is not None:
+            print("nll with J_01 fit", self.neg_loglikelihood(X=design_matrix, y=spike_train[:, to_neuron], theta=test_x, mu=0))
 
         if fit_intercept:
             return opt_res.x[:-1], opt_res.x[-1]
@@ -181,9 +185,9 @@ class Maximum_likelihood_estimator:
         if not exclude_self_coupling:
             fitted_with_basis, basis = self.fit_basis(
                         spike_train, to_neuron=self.observed[j], basis=self.alpha_basis(), tol=tol)
-            return (basis@fitted_with_basis.coef_[i*len(self.basis_order):i*len(self.basis_order)+len(
-                        self.basis_order)])[::-1], fitted_with_basis.hess, fitted_with_basis.intercept_
-            # return fitted_with_basis
+            # return (basis@fitted_with_basis.coef_[i*len(self.basis_order):i*len(self.basis_order)+len(
+            #             self.basis_order)])[::-1], fitted_with_basis.hess, fitted_with_basis.intercept_
+            return fitted_with_basis.coef_, None, fitted_with_basis.intercept_
         else:
             fitted_with_basis, basis = self.fit_basis_no_self_coupling(
                         spike_train, to_neuron=self.observed[j], basis=self.alpha_basis(), tol=tol)
@@ -254,3 +258,56 @@ class Maximum_likelihood_estimator:
         fig.tight_layout()
         if savefig:
             fig.savefig(f'./Figures/{figname}.pdf', bbox_inches="tight")
+
+
+    def _check_optimize_result(self, solver, result, max_iter=None,
+                           extra_warning_msg=None):
+        """Check the OptimizeResult for successful convergence
+
+        Parameters
+        ----------
+        solver : str
+        Solver name. Currently only `lbfgs` is supported.
+
+        result : OptimizeResult
+        Result of the scipy.optimize.minimize function.
+
+        max_iter : int, default=None
+        Expected maximum number of iterations.
+
+        extra_warning_msg : str, default=None
+            Extra warning message.
+
+        Returns
+        -------
+        n_iter : int
+        Number of iterations.
+        """
+        # handle both scipy and scikit-learn solver names
+        if solver == "lbfgs":
+            if result.status != 0:
+                try:
+                    # The message is already decoded in scipy>=1.6.0
+                    result_message = result.message.decode("latin1")
+                except AttributeError:
+                    result_message = result.message
+                warning_msg = (
+                    "{} failed to converge (status={}):\n{}.\n\n"
+                    "Increase the number of iterations (max_iter) "
+                    "or scale the data as shown in:\n"
+                    "    https://scikit-learn.org/stable/modules/"
+                    "preprocessing.html"
+                ).format(solver, result.status, result_message)
+                if extra_warning_msg is not None:
+                    warning_msg += "\n" + extra_warning_msg
+                # warnings.warn(warning_msg, ConvergenceWarning, stacklevel=2)
+            if max_iter is not None:
+                # In scipy <= 1.0.0, nit may exceed maxiter for lbfgs.
+                # See https://github.com/scipy/scipy/issues/7854
+                n_iter_i = min(result.nit, max_iter)
+            else:
+                n_iter_i = result.nit
+        else:
+            raise NotImplementedError
+
+        return n_iter_i
