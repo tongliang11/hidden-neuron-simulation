@@ -7,17 +7,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 from datetime import date
+import scipy.io
 
 data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 fig_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "figs")
 
-def simulate_spk_train(N=100, Nt=1000000, save=True):
+def simulate_spk_train(N=100, Nt=1000000, weight_matrix=None, save=True):
     spk_train = SPK(N=N, Nt=Nt, dt=0.05, p=0.3, weight_factor=0.9)
-    spk_train.weight_matrix[1, 0] = 0.3
-    spk_train.weight_matrix[0, 1] = 0
+    
+    if weight_matrix is not None:
+        spk_train.weight_matrix = weight_matrix
+        filename = f"spk_train_{N}_{Nt}_m_new.pickle"
+    else:
+        spk_train.weight_matrix[1, 0] = 0.3
+        spk_train.weight_matrix[0, 1] = 0
+        filename = f"spk_train_{N}_{Nt}.pickle"
     spk_train.simulate_poisson()
     if save:
-        with open(os.path.join(data_path, f"spk_train_{N}_{Nt}.pickle"), "wb") as f:
+        with open(os.path.join(data_path, filename), "wb") as f:
             pickle.dump(spk_train, f)
     return spk_train
 
@@ -96,7 +103,9 @@ if __name__ == "__main__":
 
     # step 1: simulate spike train or load existing spk_train data
     if args.rerun:
-        spk_train = simulate_spk_train(N=128, Nt=100000)
+        
+        m_new = scipy.io.loadmat('m_new.mat')['Mnew']   
+        spk_train = simulate_spk_train(N=128, weight_matrix=m_new, Nt=200000)
     else:
         spk_train = load_spk_train(N=128, Nt=200000)
 
@@ -126,8 +135,8 @@ if __name__ == "__main__":
     #     J_01, J_01_intercept = infer_J_ij(spk_train.spike_train, 0, 1, basis_order=[1], observed_neurons=range(n_observed), with_basis=True, tol=1e-5, data_percent=data, exclude_self_copuling=False, save=True)
     #     J_10, J_10_intercept = infer_J_ij(spk_train.spike_train, 1, 0, basis_order=[1], observed_neurons=range(n_observed), with_basis=True, tol=1e-5, data_percent=data, exclude_self_copuling=False, save=True)
     
-    # for n_observed in [16, 32, 64]:
-    #     infer_weight_matrix(spk_train.spike_train, basis_order=[1], observed_neurons=range(n_observed))
+    for n_observed in [128]:
+        infer_weight_matrix(spk_train.spike_train, basis_order=[1], observed_neurons=range(n_observed))
     # # # np.savetxt(os.path.join(data_path, "J10.txt"), J_10)
     #     print("J_01_intercept", J_01_intercept)
     #     print("J_10_intercept", J_10_intercept)
@@ -143,18 +152,18 @@ if __name__ == "__main__":
     # print("J00", J_00)
     # print("J10", J_10)
     # step 3: make plots
-    start = time.time()
-    J_01, J_01_intercept = infer_J_ij(spk_train.spike_train[:20000,:], 1, 1, basis_order=[1], observed_neurons=range(128), with_basis=True, tol=1e-4, data_percent=1, exclude_self_copuling=False, save=False)
-    print("time for sklearn", time.time() - start)
+    # start = time.time()
+    # J_01, J_01_intercept = infer_J_ij(spk_train.spike_train[:20000,:], 1, 1, basis_order=[1], observed_neurons=range(128), with_basis=True, tol=1e-4, data_percent=1, exclude_self_copuling=False, save=False)
+    # print("time for sklearn", time.time() - start)
     
-    start = time.time()
-    mle = MLE(filter_length=100, dt=0.1, basis_order=[1], observed=range(128), tau=1)
-    # print("design matrix shape", mle.design_matrix(spk_train.spike_train, to_neuron=1).shape)
-    coef, intercept = mle.fit_nll(spk_train.spike_train[:20000,:], to_neuron=1, tol=1e-6, test_x=list(J_01)+[J_01_intercept])
-    print("time for nll", time.time() - start)
+    # start = time.time()
+    # mle = MLE(filter_length=100, dt=0.1, basis_order=[1], observed=range(128), tau=1)
+    # # print("design matrix shape", mle.design_matrix(spk_train.spike_train, to_neuron=1).shape)
+    # coef, intercept = mle.fit_nll(spk_train.spike_train[:20000,:], to_neuron=1, tol=1e-6, test_x=list(J_01)+[J_01_intercept])
+    # print("time for nll", time.time() - start)
     
-    print("coef shape, coef:", coef.shape, coef[:5])
-    print('intercept', intercept)
-    print("J_01, intercept", J_01[:5], J_01_intercept)
+    # print("coef shape, coef:", coef.shape, coef[:5])
+    # print('intercept', intercept)
+    # print("J_01, intercept", J_01[:5], J_01_intercept)
 
     
