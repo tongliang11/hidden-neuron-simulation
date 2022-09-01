@@ -102,10 +102,32 @@ class Maximum_likelihood_estimator:
         return nlogL, grad
 
 
-    def fit_nll(self, spike_train, to_neuron, test_x=None, fit_with_basis=True, fit_intercept=True, tol=1e-4):
-        
+    def fit_nll(self, spike_train, to_neuron, theta_constraint=None, theta_initial=None, fit_with_basis=True, fit_intercept=True, tol=1e-4):
+        """Maximum likelihood fit of neuron connections
+
+            Args:
+                spike_train: list or ndarray
+                    spike train data with shape (Nt, N)
+                to_neuron: int
+                    index of target neuron, should be in the range of (0, N-1)
+                theta_constraint: None or (list or 1darray)
+                    fix some theta or intercept while keeping others free for inference
+                theta_inital: None or (list or 1darray)
+                    initial theta
+                fit_with_basis: boolean
+                    if true, modify design matrix with design @ basis
+                fit_intercept: boolean
+                    if true, add columns of 1 to design matrix
+                tol: float:
+                    tolerance level for scipy minimize
+            
+            Return:
+                fitted theta, fitted intercept
+                    
+
+        """
         design_matrix = self.design_matrix(spike_train)
-        print('design shape', design_matrix.shape)
+        logging.debug(f'design shape: {design_matrix.shape}')
         if fit_with_basis:
             basis = self.alpha_basis()
             diag_basis = block_diag(*[basis for _ in range(len(self.observed))])
@@ -115,10 +137,32 @@ class Maximum_likelihood_estimator:
         if fit_intercept:
             design_matrix = np.hstack((design_matrix, np.ones(design_matrix.shape[0]).reshape(design_matrix.shape[0], 1)))
 
-        theta_inital = np.random.normal(0, 1, size=design_matrix.shape[1])
-        theta_inital = test_x
-        nll = self.neg_loglikelihood(X=design_matrix, y=spike_train[:, to_neuron], theta=theta_inital, mu=0)
+        # nll = self.neg_loglikelihood(X=design_matrix, y=spike_train[:, to_neuron], theta=theta_inital, mu=0)
         
+        X = design_matrix
+        y = spike_train[:, to_neuron]
+        
+        if theta_constraint is not None:
+            if not isinstance(theta_constraint, (list, tuple, np.ndarray)):
+                raise f"theta_constraint needs to be a list/array with length {X.shape[1]}"
+            # drop columns from X and substract y with X @ theta_constraint
+            mask = np.isnan(theta_constraint)
+            X = design_matrix[:, mask]
+            X_masked = design_matrix[:, np.logical_not(mask)]
+            y = y - X_masked @ theta_constraint[np.logical_not(mask)]
+        else:
+            theta_constraint = np.empty(X.shape[1])
+            theta_constraint[:] = np.nan
+            mask = np.ones(X.shape[1])
+
+        if theta_initial is None:
+            theta_inital = np.random.normal(0, 1, size=X.shape[1])
+
+        logging.debug("theta_initial shape: {}".format(theta_inital.shape))
+        logging.debug("X and y shape: {}, {}".format(X.shape, y.shape))
+    
+
+
         opt_res = scipy.optimize.minimize(
                 self.neg_loglikelihood,
                 theta_inital,
@@ -134,23 +178,28 @@ class Maximum_likelihood_estimator:
                     # machine precision for float64, which is the dtype used by lbfgs.
                     "ftol": 1e3 * np.finfo(float).eps,
                 },
-                args=(design_matrix, spike_train[:, to_neuron], -1),
+                args=(X, y, 0),
             )
-        print("initial nll", nll[0])
+        # print("initial nll", nll[0])
         # print("grad", grad)
         print(opt_res)
         # print(opt_res)
         n_iterations = self._check_optimize_result('lbfgs', opt_res)
-        nll = self.neg_loglikelihood(X=design_matrix, y=spike_train[:, to_neuron], theta=opt_res.x, mu=0)
+        # nll = self.neg_loglikelihood(X=design_matrix, y=spike_train[:, to_neuron], theta=opt_res.x, mu=0)
         print("nll niter", n_iterations)
-        print("nll after minimization", nll)
+        # print("theta_initiala", theta_inital)
+        # print("nll after minimization", nll)
         if test_x is not None:
             print("nll with J_01 fit", self.neg_loglikelihood(X=design_matrix, y=spike_train[:, to_neuron], theta=test_x, mu=0))
 
         if fit_intercept:
-            return opt_res.x[:-1], opt_res.x[-1]
+            theta_constraint[mask] = opt_res.x
+            return theta_constraint[:-1], theta_constraint[-1]
+            # return opt_res.x[:-1], opt_res.x[-1], np.nonzero(mask)
         else:
-            return opt_res.x, 0
+            # return opt_res.x, 0, np.nonzero(mask)
+            theta_constraint[mask] = opt_res.x
+            return theta_constraint, None
 
     def fit_basis(self, spike_train, to_neuron, basis, tol=1e-4):
         diag_basis = block_diag(*[basis for _ in range(len(self.observed))])
