@@ -13,7 +13,7 @@ data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 fig_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "figs")
 
 def simulate_spk_train(N=100, Nt=1000000, weight_matrix=None, filename=None, save=True):
-    spk_train = SPK(N=N, Nt=Nt, dt=0.05, p=0.3, weight_factor=0.9)
+    spk_train = SPK(N=N, Nt=Nt, dt=0.1, p=0.5, weight_factor=1.5)
     
     if weight_matrix is not None:
         spk_train.weight_matrix = weight_matrix
@@ -24,7 +24,7 @@ def simulate_spk_train(N=100, Nt=1000000, weight_matrix=None, filename=None, sav
         spk_train.weight_matrix[0, 1] = 0
         if filename is None:
             filename = f"spk_train_{N}_{Nt}.pickle"
-    spk_train.simulate_poisson()
+    spk_train.simulate_poisson(b=-2)
     if save:
         with open(os.path.join(data_path, filename), "wb") as f:
             pickle.dump(spk_train, f)
@@ -109,7 +109,9 @@ if __name__ == "__main__":
 
     # step 1: simulate spike train or load existing spk_train data
     if args.rerun:
-        pass
+        # weight = np.array([[0, 1], [-1, 0]])
+        N, Nt = 64, 1000000
+        spk_train = simulate_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b-2")
         
         # m_new = scipy.io.loadmat('/home/tong/hidden-neuron-simulation/src/m_new.mat')['Mnew']   
         # for i in range(9, 10):
@@ -165,21 +167,22 @@ if __name__ == "__main__":
     # print("J00", J_00)
     # print("J10", J_10)
     # step 3: make plots
-    start = time.time()
-    J_01, J_01_intercept = infer_J_ij(spk_train.spike_train[:20000,:], 1, 1, basis_order=[1], observed_neurons=range(128), with_basis=True, tol=1e-6, data_percent=1, exclude_self_copuling=False, save=False)
-    print("time for sklearn", time.time() - start)
+
+    # start = time.time()
+    # J_01, J_01_intercept = infer_J_ij(spk_train.spike_train[:20000,:], 1, 1, basis_order=[1], observed_neurons=range(128), with_basis=True, tol=1e-6, data_percent=1, exclude_self_copuling=False, save=False)
+    # print("time for sklearn", time.time() - start)
     
-    start = time.time()
-    mle = MLE(filter_length=100, dt=0.1, basis_order=[1], observed=range(128), tau=1)
-    test_x = None #list(J_01)+[J_01_intercept] #0.11012991312678913
-    # print("design matrix shape", mle.design_matrix(spk_train.spike_train, to_neuron=1).shape)
-    theta_constraint = np.empty(129)
-    theta_constraint[:] = np.nan
-    theta_constraint[0] = 0
-    coef, intercept = mle.fit_nll(spk_train.spike_train[:20000,:], to_neuron=1, theta_constraint=theta_constraint, tol=1e-6, test_x=test_x)
-    print("time for nll", time.time() - start)
-    print("coef shape, coef:", coef.shape, coef[:5])
-    print('intercept', intercept)
+    # start = time.time()
+    # mle = MLE(filter_length=100, dt=0.1, basis_order=[1], observed=range(128), tau=1)
+    # test_x = None #list(J_01)+[J_01_intercept] #0.11012991312678913
+    # # print("design matrix shape", mle.design_matrix(spk_train.spike_train, to_neuron=1).shape)
+    # theta_constraint = np.empty(129)
+    # theta_constraint[:] = np.nan
+    # theta_constraint[0] = 0
+    # coef, intercept = mle.fit_nll(spk_train.spike_train[:20000,:], to_neuron=1, theta_constraint=theta_constraint, tol=1e-6, test_x=test_x)
+    # print("time for nll", time.time() - start)
+    # print("coef shape, coef:", coef.shape, coef[:5])
+    # print('intercept', intercept)
     # print("J_01, intercept", J_01[:5], J_01_intercept)
 
     
