@@ -48,9 +48,9 @@ def plot_cov(cross_correlation,N_i, N_j, start=0, max_t_steps=100, dt=0.1, ax=No
         fig.savefig(os.path.join(fig_dir, figname))
         
 
-def cov_estimate_plot(spk_train, N_i, N_j):
-    cov = cov_estimate(spk_train, N_i, N_j)
-    plot_cov(cov,N_i,N_j,start=1)
+def cov_estimate_plot(spk_train, N_i, N_j, dp, filename=None, figname=None):
+    cov = cov_estimate(spk_train, N_i, N_j, data_percent=dp, filename=filename)
+    plot_cov(cov,N_i,N_j,start=1, figname=figname)
 
 
 def load_spk_train(N, Nt, filename=None):
@@ -78,12 +78,13 @@ if __name__ == "__main__":
             # spk_train = simulate_spk_train(N=256, weight_matrix=m_new, Nt=200000, filename=f"spk_train_256_m_new_p06_{i}")
     else:
         N, Nt = 64, 1000000
-        spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b-2")
+        spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b-2_weight_0")
 
     spk_train = spk_train.spike_train #[:500000,:]
-    cov0 = cov_estimate_plot(spk_train, 0, 0)
-    cov = cov_estimate_plot(spk_train, 0, 1)
-    cov2 = cov_estimate_plot(spk_train, 1, 1)
+    for dp in [0.2, 0.4, 0.6, 0.8, 1]:
+        cov0 = cov_estimate_plot(spk_train, 0, 0, dp,filename=f"{N}_neuron_correlation_{0}_{0}_{int(dp*Nt)}_data_independent.txt", figname=f"cov_{0}_{0}_independent.png")
+        cov = cov_estimate_plot(spk_train, 0, 1, dp,filename=f"{N}_neuron_correlation_{0}_{1}_{int(dp*Nt)}_data_independent.txt", figname=f"cov_{0}_{1}_independent.png")
+        cov2 = cov_estimate_plot(spk_train, 1, 1, dp,filename=f"{N}_neuron_correlation_{1}_{1}_{int(dp*Nt)}_data_independent.txt", figname=f"cov_{1}_{1}_independent.png")
     # cov = np.loadtxt("/home/tong/hidden-neuron-simulation/data/2022-09-13/2_neuron_correlation_1_1_20000000_data.txt")
     # plot_cov(cov, 1, 1, start=1, figname="2_neuron_20m_Data_cov_1_1.png")
     # plot_cov(cov,0, 0,start=1)

@@ -165,7 +165,7 @@ class Spike_train:
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         plt.show()
 
-    def plot_raster(self, t_window=None, ll=0.5, savefig=False):
+    def plot_raster(self, t_window=None, ll=0.5, savefig=False, fig_path=None):
         import matplotlib.pyplot as plt
         from matplotlib.ticker import MaxNLocator
         def binary_search(spk_time, target):
@@ -198,7 +198,9 @@ class Spike_train:
         ax.set_xlabel('Time (s)', size=18)
         ax.yaxis.set_major_locator(MaxNLocator(integer=True))
         if savefig:
-            plt.savefig(f'./Figures/raster.pdf', bbox_inches="tight")
+            if fig_path is None:
+                fig_path = './Figures/raster.pdf'
+            plt.savefig(fig_path, bbox_inches="tight")
         plt.show()
 
     def plot_correlation(self, N_i, N_j, max_t_steps, norm=True, plot=False, start=None, ax=None, savefig=False, figname='Corr'):

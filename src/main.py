@@ -12,19 +12,19 @@ import scipy.io
 data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 fig_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "figs")
 
-def simulate_spk_train(N=100, Nt=1000000, weight_matrix=None, filename=None, save=True):
-    spk_train = SPK(N=N, Nt=Nt, dt=0.1, p=0.5, weight_factor=1.5)
+def simulate_spk_train(N=100, Nt=1000000, baseline=-2, weight_matrix=None, weight_factor=2, filename=None, save=True):
+    spk_train = SPK(N=N, Nt=Nt, dt=0.1, p=0.5, weight_factor=weight_factor)
     
     if weight_matrix is not None:
         spk_train.weight_matrix = weight_matrix
         if filename is None:
             filename = f"spk_train_{N}_{Nt}_m_new.pickle"
     else:
-        spk_train.weight_matrix[1, 0] = 0.3
-        spk_train.weight_matrix[0, 1] = 0
+        # spk_train.weight_matrix[1, 0] = 0.3
+        # spk_train.weight_matrix[0, 1] = 0
         if filename is None:
             filename = f"spk_train_{N}_{Nt}.pickle"
-    spk_train.simulate_poisson(b=-2)
+    spk_train.simulate_poisson(b=baseline)
     if save:
         with open(os.path.join(data_path, filename), "wb") as f:
             pickle.dump(spk_train, f)
@@ -99,6 +99,14 @@ def cov_estimate(spk_train, N_i, N_j, max_t_steps=100, data_percent=1, norm=True
     return cross_correlation
 
 
+def firing_rate(spk_train, dt=0.1):
+    print("firing rate: ", np.mean(spk_train, 0)/dt)
+    plt.hist(np.mean(spk_train, 0)/dt)
+    print("median:", np.median(np.mean(spk_train, 0)/dt))
+    print("mean:", np.mean(np.mean(spk_train, 0)/dt))
+    plt.xlabel("Firing rate (spike/second)")
+    plt.savefig("firing_rate.png")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Flags to control spike train simulation.')
@@ -110,16 +118,23 @@ if __name__ == "__main__":
     # step 1: simulate spike train or load existing spk_train data
     if args.rerun:
         # weight = np.array([[0, 1], [-1, 0]])
-        N, Nt = 64, 1000000
-        spk_train = simulate_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b-2")
-        
+        # N, Nt = 64, 1000000
+        # spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b_-2_weight_2")
+        weight_matrix = np.loadtxt("./src/e-i-weight_64.txt")
+        # weight_matrix = None
+        N, Nt = 64, 100000
+        spk_train = simulate_spk_train(N=N, Nt=Nt, weight_matrix=weight_matrix, baseline=-1, weight_factor=0.9, filename=f"spk_train_{N}_{Nt}_e-i")
+        spk_train.plot_raster(t_window=[7000,8000], savefig=True, fig_path="./src/Figures/e-i-raster.png")
         # m_new = scipy.io.loadmat('/home/tong/hidden-neuron-simulation/src/m_new.mat')['Mnew']   
         # for i in range(9, 10):
         #     m_new = np.loadtxt(f"/home/tong/hidden-neuron-simulation/data/weight_matrix/weight_matrix_new_{i}")
             # spk_train = simulate_spk_train(N=256, weight_matrix=m_new, Nt=200000, filename=f"spk_train_256_m_new_p06_{i}")
     else:
-        spk_train = load_spk_train(N=128, Nt=200000)
+        N, Nt = 64, 1000000
+        spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b-2_weight_2")
 
+
+    firing_rate(spk_train.spike_train)
     # spk_train = spk_train[:20000,:]
         # np.savetxt(os.path.join(data_path, f"spk_train_weights_{100}.txt"), spk_train.weight_matrix)
         # spk_train.simulate_poisson(Nt=2000000)

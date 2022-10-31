@@ -230,31 +230,38 @@ class Maximum_likelihood_estimator:
                      y=spike_train[:, to_neuron])
         return sklearnm
 
-    def infer_J_ij(self, N_i, N_j, spike_train):
-        
-        inferred = self.fit_basis_free(spike_train, N_j)
+    def infer_J_ij(self, N_i, N_j, spike_train, tol):
+        # print(N_j)
+        # print(self.observed)
+        assert N_j in self.observed, "to_neuron has to be in the observed neuron group"
+
+        inferred = self.fit_basis_free(spike_train, N_j, tol)
         print(inferred)
         # intercept_inferred = 
         if type(N_i) == list:
-            return inferred.coef_[::-1], inferred.intercept_
+            return [inferred.coef_[idx*self.filter_length:idx*self.filter_length+self.filter_length][::-1] for idx in range(len(N_i))], inferred.intercept_
             # return [coef_inferred[i*self.filter_length:i*self.filter_length+self.filter_length][::-1] for i in N_i]
         else:
             return inferred.coef_[N_i*self.filter_length:N_i*self.filter_length+self.filter_length][::-1], inferred.intercept_
 
 
 
-    def infer_J_ij_basis(self, i, j, spike_train, tol=1e-4, exclude_self_coupling=False):
+    def infer_J_ij_basis(self, N_i, N_j, spike_train, tol=1e-4, exclude_self_coupling=False):
         # return self.fit_basis_free(spike_train, j).coef_[
         #                 i*self.filter_length:i*self.filter_length+self.filter_length][::-1]
         if not exclude_self_coupling:
             fitted_with_basis, basis = self.fit_basis(
-                        spike_train, to_neuron=self.observed[j], basis=self.alpha_basis(), tol=tol)
-            return (basis@fitted_with_basis.coef_[i*len(self.basis_order):i*len(self.basis_order)+len(
+                        spike_train, to_neuron=N_j, basis=self.alpha_basis(), tol=tol)
+            if type(N_i) == list:
+                return [(basis@fitted_with_basis.coef_[idx*len(self.basis_order):idx*len(self.basis_order)+len(
+                        self.basis_order)])[::-1] for idx in range(len(N_i))], fitted_with_basis.hess, fitted_with_basis.intercept_
+            else:
+                return (basis@fitted_with_basis.coef_[N_i*len(self.basis_order):N_i*len(self.basis_order)+len(
                         self.basis_order)])[::-1], fitted_with_basis.hess, fitted_with_basis.intercept_
             # return fitted_with_basis.coef_, None, fitted_with_basis.intercept_
         else:
             fitted_with_basis, basis = self.fit_basis_no_self_coupling(
-                        spike_train, to_neuron=self.observed[j], basis=self.alpha_basis(), tol=tol)
+                        spike_train, to_neuron=j, basis=self.alpha_basis(), tol=tol)
             if i == j:
                 return [0]*len(basis), None, None
             elif i > j:
