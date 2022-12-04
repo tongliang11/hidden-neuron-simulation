@@ -6,10 +6,10 @@ from datetime import date
 data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 fig_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "figs")
 
-def cov_estimate(spk_train, N_i, N_j, max_t_steps=100, data_percent=1, norm=True, save=True, filename=None):
+def cov_estimate(spk_train, N_i, N_j, max_t_steps=100, data_percent=1, norm=True, save=True, dir_name=None, filename=None):
     Nt = int(spk_train.shape[0] * data_percent)
     N = spk_train.shape[1]
-    print(f"correlation estimation with {Nt} data...")
+    print(f"correlation {[N_i, N_j]} estimation with {Nt} data...")
     start_time = time.time()
     normalized_spk_train_1 = spk_train[:Nt, N_i]-np.mean(spk_train[:Nt, N_i])
     normalized_spk_train_2 = spk_train[:Nt, N_j]-np.mean(spk_train[:Nt, N_j])
@@ -23,7 +23,9 @@ def cov_estimate(spk_train, N_i, N_j, max_t_steps=100, data_percent=1, norm=True
     total_time = time.time()-start_time  
     print(f"Time took for covariance estimation {total_time:.2f} s")
     if save:
-        file_path = os.path.join(data_path, f"{date.today()}")
+        if dir_name is None:
+            dir_name = date.today()
+        file_path = os.path.join(data_path, dir_name)
         os.makedirs(file_path, exist_ok=True)
         if filename is None:
             filename = f"{N}_neuron_correlation_{N_i}_{N_j}_{Nt}_data.txt"

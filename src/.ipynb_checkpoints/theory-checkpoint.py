@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
+
 def basis_w(w, order=1, gamma=1):
     return 1/(np.math.factorial(order)*(w * 1j / gamma + 1)**(order + 1))
 
@@ -25,7 +27,7 @@ def rates_ss(W,b=-1,Tmax=1000):  # set inputs here
     r = np.zeros(N)
     s_dummy = np.zeros(N)
     s = np.zeros(N)
-    b = -1
+
 
     r_vec = np.zeros((N, Tmax))
     for i in range(Tmax):
@@ -48,7 +50,7 @@ def cross_covariance(w, W, phi_ss):
     return (Delta@np.diag(phi_ss) @np.conjugate(Delta).T) # phi_ss is phi_0
 #     return phi_ss * Delta @ np.conjugate(Delta).T # should be equivelent to this
 
-def plot_cov_time(weight, Nw=200):
+def plot_cov_time(weight,b, Nw=200):
     """ Calculate Tree-level cross-covariance in frequency domain
      Args:
          weight [2d array]: weight matrix of the network
@@ -56,7 +58,7 @@ def plot_cov_time(weight, Nw=200):
      Return:
          cross-covariance, time range
     """
-    phi_steady_state = rates_ss(weight,1000)
+    phi_steady_state = rates_ss(weight,b=b,Tmax=1000)
     dt = 0.1
     t0 = -10
     w_range = np.fft.fftfreq(Nw, dt)

@@ -8,9 +8,9 @@ import time
 from datetime import date
 import scipy.io
 
-# data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 fig_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "figs")
-data_path = os.path.join(os.path.dirname(__file__), "figure_data")
+# data_path = os.path.join(os.path.dirname(__file__), "figure_data")
 
 def infer_J_ij(spk_train, i, j, basis_order=[0, 1, 2], observed_neurons=range(1), data_percent=1, tol=1e-4, exclude_self_copuling=False, with_basis=False, save=True, dir_name=None):
     if save:
@@ -111,7 +111,7 @@ def calculate_corr(N_i, N_j, obs, cov_path="/home/tong/hidden-neuron-simulation/
     return cov_filter_similarity(cov[1:], filter[:-1])
 
 
-def calculate_corr_all(N_i, N_j, obs=None, cov_path="/home/tong/hidden-neuron-simulation/data/2022-09-27", filter_path="/home/tong/hidden-neuron-simulation/data/2022-09-27_MLE", dp=1):
+def calculate_corr_all(N_i, N_j, obs=None, cov_path="/home/tong/hidden-neuron-simulation/data/2022-09-27", filter_path="/home/tong/hidden-neuron-simulation/data/2022-09-27_MLE", dp=1, total_data=1000000):
     corr = {}
     observed = [2,4,8,16,32, 48, 64] if obs == None else [obs]
     for obs in observed:
@@ -121,19 +121,20 @@ def calculate_corr_all(N_i, N_j, obs=None, cov_path="/home/tong/hidden-neuron-si
         # for N_j in range(obs):
         #     for N_i in range(N_j+1):
         # N_i, N_j = 1,1
-        cov = np.loadtxt(os.path.join(cov_path, f"cov_{N_i}_{N_j}_{int(dp*1000000)}")) #f"64_neuron_correlation_{N_i}_{N_j}_{int(dp*1000000)}_data_independent.txt"))
-        # cov2 = np.loadtxt(os.path.join("/home/tong/hidden-neuron-simulation/data/2022-09-21", f"64_neuron_correlation_{N_i}_{N_j}_{int(dp*1000000)}_data_independent.txt"))
         try:
-            # if obs <= 16:
-            filter = np.loadtxt(os.path.join(filter_path, f"J_{N_i}_{N_j}_{obs}_observed_{int(dp*1000000)}_data.txt"))
-            # else:
-            #     filter = np.loadtxt(os.path.join("/home/tong/hidden-neuron-simulation/data/2022-09-28_MLE", f"J_{N_i}_{N_j}_{obs}_observed_{int(dp*1000000)}_data.txt"))
-            # print(filter)
+            cov = np.loadtxt(os.path.join(cov_path, f"cov_{N_i}_{N_j}_{int(dp*total_data)}")) 
         except IOError:
-            # print("filter file not found in first attemp...")
-            # filter = np.loadtxt(os.path.join("/home/tong/hidden-neuron-simulation/data/2022-09-28_MLE", f"J_{N_i}_{N_j}_{obs}_observed_{int(dp*1000000)}_data.txt"))
-        # except:
-            print("filter file not found in second attemp...")
+            print(f"cov file not found in {os.path.join(cov_path, f'cov_{N_i}_{N_j}_{int(dp*total_data)}')}...")
+        #f"64_neuron_correlation_{N_i}_{N_j}_{int(dp*1000000)}_data_independent.txt"))
+        # cov2 = np.loadtxt(os.path.join("/home/tong/hidden-neuron-simulation/data/2022-09-21", f"64_neuron_correlation_{N_i}_{N_j}_{int(dp*1000000)}_data_independent.txt"))
+        filter_file_path = os.path.join(filter_path, f"J_{N_i}_{N_j}_{obs}_observed_{int(dp*total_data)}_data.txt")
+        if os.path.exists(filter_file_path):
+            filter = np.loadtxt(filter_file_path)
+        elif os.path.exists(os.path.join(filter_path, f"J_{N_i}_{N_j}_{obs}_observed_{int(dp*total_data)}_data_no_basis.txt")):
+            filter = np.loadtxt(os.path.join(filter_path, f"J_{N_i}_{N_j}_{obs}_observed_{int(dp*total_data)}_data_no_basis.txt"))
+            
+        else:
+            print(f"filter file not found in {os.path.join(filter_path, f'J_{N_i}_{N_j}_{obs}_observed_{int(dp*total_data)}_data.txt')}...")
             continue
         corr[obs].append(cov_filter_similarity(cov[1:], filter[:-1]))
                 # print(N_j, N_i)
@@ -159,8 +160,8 @@ if __name__ == "__main__":
     if args.rerun:
         pass
     else:
-        N, Nt = 64, 1000000
-        spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b_-2_weight_2")
+        N, Nt = 64, 2000000
+        spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b_-2_-1_diag_weight_1.5")
 
 
 
@@ -187,6 +188,15 @@ if __name__ == "__main__":
     # N_i = 0 #[i for i in range(obs)]
     # N_j = 0
 
+    for dp in [0.8]: #[0.2, 0.4, 0.6, 0.8, 1]:
+        for obs in [64]: #[2, 4, 8, 16, 32, 48, 64]:
+            N_i = [i for i in range(obs)]
+            for N_j in range(obs):
+                # print("N_J", N_j)
+                if not os.path.exists(os.path.join(data_path, "Spk64_2m_Data_volume_obs_-1_diag_weight_1_5", f"J_{N_j}_{N_j}_{obs}_observed_{int(dp*2000000)}_data_no_basis.txt")):
+                    print(f"J_{N_j}_{N_j}_{obs}_observed_{int(dp*2000000)}", "doesn't exists")
+                    # break
+                    inferred_no_basis = infer_J_ij(spk_train.spike_train, N_i, N_j, data_percent=dp, with_basis=False, save=True, observed_neurons=range(obs), tol=1e-8, dir_name="Spk64_2m_Data_volume_obs_-1_diag_weight_1_5")
 
 
 
@@ -196,14 +206,17 @@ if __name__ == "__main__":
     #         N_i = [i for i in range(obs)]
     #         for N_j in range(obs):
     #             # print("N_J", N_j)
-    #             inferred_no_basis = infer_J_ij(spk_train.spike_train, N_i, N_j, data_percent=dp, with_basis=False, save=True, observed_neurons=range(obs), tol=1e-8, dir_name="2022-10-05-data-volume")
+    #             if not os.path.exists(os.path.join(data_path, "Spk64_2m_Data_volume_obs_-1_diag_EI_network", f"J_{N_j}_{N_j}_{obs}_observed_{int(dp*2000000)}_data_no_basis.txt")):
+    #                 print(f"J_{N_j}_{N_j}_{obs}_observed_{int(dp*2000000)}", "doesn't exists")
+    #                 # break
+    #                 inferred_no_basis = infer_J_ij(spk_train.spike_train, N_i, N_j, data_percent=dp, with_basis=False, save=True, observed_neurons=range(obs), tol=1e-8, dir_name="Spk64_2m_Data_volume_obs_-1_diag_EI_network")
 
-    dp = 1
-    observed = np.sort(np.random.choice(64, 32, replace=False))
-    N_i = list(observed)
-    for i in [1,2,3]:
-        for N_j in observed:
-            inferred_no_basis = infer_J_ij(spk_train.spike_train, N_i, N_j, data_percent=dp, with_basis=False, save=True, observed_neurons=observed, tol=1e-8, dir_name=f"2022-10-11-shuffled-32-observed_run_{i}")
+    # dp = 1
+    # observed = np.sort(np.random.choice(64, 32, replace=False))
+    # N_i = list(observed)
+    # for i in [1,2,3]:
+    #     for N_j in observed:
+    #         inferred_no_basis = infer_J_ij(spk_train.spike_train, N_i, N_j, data_percent=dp, with_basis=False, save=True, observed_neurons=observed, tol=1e-8, dir_name=f"2022-10-11-shuffled-32-observed_run_{i}")
 
 
     # print(infer_J_ij(spk_train.spike_train, N_i, 32, data_percent=dp, with_basis=False, save=True, observed_neurons=observed, tol=1e-8, dir_name=f"2022-10-11-shuffled-32-observed-test"))

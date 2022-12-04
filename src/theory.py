@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
+
 def basis_w(w, order=1, gamma=1):
     return 1/(np.math.factorial(order)*(w * 1j / gamma + 1)**(order + 1))
 
