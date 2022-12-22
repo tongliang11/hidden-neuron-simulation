@@ -82,28 +82,28 @@ def plot_mle_cov(cov_3_3, inferred_with_basis_3_3, inferred_no_basis_3_3, w_true
         print("figure saved!")
         
         
-def plot_mle_cov_vary_obs(w_true, data_dir="Spk64_2m_Data_volume_obs_-1_diag_weight_1_5", filename="MLE_vary_obs.pdf", savefig=False):
-    fig, axs = plt.subplots(3, 3, figsize=(9.5, 7), dpi=150)
+def plot_mle_cov_vary_obs(w_true, n=3, obs=[4, 8, 16, 32, 48, 64],figsize=(9.5, 7), data_dir="Spk64_2m_Data_volume_obs_-1_diag_weight_1_5", filename="MLE_vary_obs.pdf", savefig=False):
+    fig, axs = plt.subplots(n, n, figsize=figsize, dpi=150)
     filter_length = 100
     dt = 0.1
-    observed = [0, 1, 2]
-    for j in range(3):
-        for i in range(3):
+    observed = list(range(n))
+    for j in range(n):
+        for i in range(n):
             ax2 = axs[i, j].twinx()
             axs[i, j].yaxis.tick_right()
-            for N_obs in [4, 8, 16, 32, 48, 64]:
+            for N_obs in obs:
                 inferred_wo_basis = np.loadtxt(f"/home/tong/hidden-neuron-simulation/data/{data_dir}/J_{i}_{j}_{N_obs}_observed_2000000_data_no_basis.txt")
 
                 ax2.plot(np.arange(filter_length) * dt, inferred_wo_basis, label="Inferred w/o basis {} observed".format(N_obs))
-            ax2.set_ylim(-0.3, 0.3)
+            ax2.set_ylim(-0.4, 0.4)
             alpha_filter = [w_true[observed[j], observed[i]]* k*np.exp(-k) for k in np.arange(filter_length)*dt]
             ax2.plot(np.arange(filter_length) * dt,
                            alpha_filter, '--', linewidth=5, label="Ground-truth")
             ax2.yaxis.tick_left()
             ax2.text(0.8, 0.05, r"$J_{{{}{}}}$".format(i, j), transform=ax2.transAxes,
             size=15, weight='bold')
-            if i == 1 and j == 2:
-                ax2.legend(frameon=False, bbox_to_anchor=(1.02, 0.1), loc='lower left', prop={'size': 8})
+            if i == 1 and j == 1:
+                ax2.legend(frameon=False, bbox_to_anchor=(1.05, 0), loc='lower left', prop={'size': 8})
             axs[i, j].set_yticklabels([])
             if j > 0:
                 ax2.set_yticklabels([])
@@ -117,6 +117,42 @@ def plot_mle_cov_vary_obs(w_true, data_dir="Spk64_2m_Data_volume_obs_-1_diag_wei
         print("figure saved!")
 
 
+        
+def plot_mle_cov_vary_dp(w_true, n=3, obs=64, dp=[0.2, 0.4, 0.8, 1],figsize=(9.5, 7), total_data=2000000, data_dir="Spk64_2m_Data_volume_obs_-1_diag_weight_1_5", filename="MLE_vary_dp.pdf", savefig=False):
+    fig, axs = plt.subplots(n, n, figsize=figsize, dpi=150)
+    filter_length = 100
+    dt = 0.1
+    observed = list(range(n))
+    for j in range(n):
+        for i in range(n):
+            ax2 = axs[i, j].twinx()
+            axs[i, j].yaxis.tick_right()
+            for data_volume in [int(dp_*total_data) for dp_ in dp]:
+                inferred_wo_basis = np.loadtxt(f"/home/tong/hidden-neuron-simulation/data/{data_dir}/J_{i}_{j}_{obs}_observed_{data_volume}_data_no_basis.txt")
+
+                ax2.plot(np.arange(filter_length) * dt, inferred_wo_basis, label="Inferred w/o basis {} data".format(data_volume))
+            ax2.set_ylim(-0.4, 0.4)
+            alpha_filter = [w_true[observed[j], observed[i]]* k*np.exp(-k) for k in np.arange(filter_length)*dt]
+            ax2.plot(np.arange(filter_length) * dt,
+                           alpha_filter, '--', linewidth=5, label="Ground-truth")
+            ax2.yaxis.tick_left()
+            ax2.text(0.8, 0.05, r"$J_{{{}{}}}$".format(i, j), transform=ax2.transAxes,
+            size=15, weight='bold')
+            if i == 1 and j == 1:
+                ax2.legend(frameon=False, bbox_to_anchor=(1.05, 0), loc='lower left', prop={'size': 8})
+            axs[i, j].set_yticklabels([])
+            if j > 0:
+                ax2.set_yticklabels([])
+    fig.text(0.4, 1, 'MLE inferred effective coupling filters', ha='center', size=18)
+    fig.text(0.4, -0.01, 'Time Preceding (s)', ha='center', size=18)
+    fig.text(-0.01, 0.5, 'Filter Strength (a.u.)',
+             va='center', rotation='vertical', size=18)
+    fig.tight_layout()
+    if savefig:
+        fig.savefig(f'./Figures/{filename}', bbox_inches="tight")
+        print("figure saved!")
+
+        
 def plot_correlation(cov_path="/home/tong/hidden-neuron-simulation/data/2022-10-04", filter_path="/home/tong/hidden-neuron-simulation/data/2022-10-05-data-volume", filter_type="self-coupling", data_volume_percent=[0.2, 0.4, 0.6, 0.8, 1], total_data=1000000, ylim=[0.08, 1.15], fig_name="correlation.pdf", savefig=False):
         # self-coupling correlation
     fig, axs = plt.subplots(3, 2, figsize=(7, 10), dpi=150)

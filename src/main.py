@@ -121,7 +121,7 @@ if __name__ == "__main__":
         N, Nt = 64, 1000000
         spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b_-2_weight_2")
         # weight_matrix = np.loadtxt("/home/tong/hidden-neuron-simulation/src/E-I-network/e-i-weight_64.txt")
-        J0 = 1.6
+        J0 = 0.5
         weight_matrix = J0 * spk_train.weight_matrix + np.diag([-1]*N)
         print("weight matrix", weight_matrix)
         N, Nt = 64, 2000000

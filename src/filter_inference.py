@@ -161,7 +161,7 @@ if __name__ == "__main__":
         pass
     else:
         N, Nt = 64, 2000000
-        spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b_-2_-1_diag_weight_1.5")
+        spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b_-2_-1_diag_weight_0.5")
 
 
 
@@ -188,15 +188,15 @@ if __name__ == "__main__":
     # N_i = 0 #[i for i in range(obs)]
     # N_j = 0
 
-    for dp in [0.8]: #[0.2, 0.4, 0.6, 0.8, 1]:
-        for obs in [64]: #[2, 4, 8, 16, 32, 48, 64]:
+    for dp in [1]:
+        for obs in [64]:
             N_i = [i for i in range(obs)]
             for N_j in range(obs):
                 # print("N_J", N_j)
-                if not os.path.exists(os.path.join(data_path, "Spk64_2m_Data_volume_obs_-1_diag_weight_1_5", f"J_{N_j}_{N_j}_{obs}_observed_{int(dp*2000000)}_data_no_basis.txt")):
+                if not os.path.exists(os.path.join(data_path, "Spk64_2m_Data_volume_obs_-1_diag_weight_0_5", f"J_{N_j}_{N_j}_{obs}_observed_{int(dp*2000000)}_data_no_basis.txt")):
                     print(f"J_{N_j}_{N_j}_{obs}_observed_{int(dp*2000000)}", "doesn't exists")
                     # break
-                    inferred_no_basis = infer_J_ij(spk_train.spike_train, N_i, N_j, data_percent=dp, with_basis=False, save=True, observed_neurons=range(obs), tol=1e-8, dir_name="Spk64_2m_Data_volume_obs_-1_diag_weight_1_5")
+                    inferred_no_basis = infer_J_ij(spk_train.spike_train, N_i, N_j, data_percent=dp, with_basis=False, save=True, observed_neurons=range(obs), tol=1e-8, dir_name="Spk64_2m_Data_volume_obs_-1_diag_weight_0_5")
 
 
 
