@@ -43,7 +43,7 @@ def plot_mle_cov(cov_3_3, inferred_with_basis_3_3, inferred_no_basis_3_3, w_true
     for j in range(3):
         for i in range(3):
             ax2 = axs[i, j].twinx()
-            axs[i, j].vlines(np.arange(filter_length)[:-1] * dt, 0, cov_3_3[i][j][1:], color='black',alpha=0.3, label="Estimated Correlation", zorder=0)
+            axs[i, j].vlines(np.arange(filter_length)[:-1] * dt, 0, cov_3_3[i][j][1:], color='black',alpha=0.3, label="Spike Train Correlation", zorder=0)
             axs[i, j].set_ylim(-0.0055, 0.0055)
     #         axs[i, j].set_axisbelow(True)
             axs[i, j].yaxis.tick_right()
@@ -52,7 +52,7 @@ def plot_mle_cov(cov_3_3, inferred_with_basis_3_3, inferred_no_basis_3_3, w_true
             ax2.scatter(np.arange(filter_length) * dt, inferred_no_basis_3_3[i][j], s=5, color='red', label="Inferred w/o basis")
 
             ax2.plot(np.arange(filter_length) * dt, inferred_with_basis_3_3[i][j], linewidth=5, label=r"Inferred $J^{{eff}}_{{{},{}}}$ w/ basis".format(observed[j], observed[i]), color='red', zorder=100)
-            ax2.set_ylim(-0.3, 0.3)
+            ax2.set_ylim(-0.4, 0.4)
             alpha_filter = [w_true[observed[j], observed[i]]* k*np.exp(-k) for k in np.arange(filter_length)*dt]
             ax2.plot(np.arange(filter_length) * dt,
                            alpha_filter, '--', linewidth=5, label=r"Ground-truth $J_{{{},{}}}$".format(observed[j], observed[i]))

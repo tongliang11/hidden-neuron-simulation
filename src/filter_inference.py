@@ -113,7 +113,12 @@ def calculate_corr(N_i, N_j, obs, cov_path="/home/tong/hidden-neuron-simulation/
 
 def calculate_corr_all(N_i, N_j, obs=None, cov_path="/home/tong/hidden-neuron-simulation/data/2022-09-27", filter_path="/home/tong/hidden-neuron-simulation/data/2022-09-27_MLE", dp=1, total_data=1000000):
     corr = {}
-    observed = [2,4,8,16,32, 48, 64] if obs == None else [obs]
+    if obs is None:
+        observed = [2,4,8,16,32, 48, 64] 
+    elif isinstance(obs, int):
+        observed = [obs]
+    else:
+        observed = obs
     for obs in observed:
         if N_i >= obs or N_j >= obs:
             continue
@@ -161,7 +166,7 @@ if __name__ == "__main__":
         pass
     else:
         N, Nt = 64, 2000000
-        spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b_-2_-1_diag_weight_0.5")
+        spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b_-2_-1_diag_EI_network_weight_4")
 
 
 
@@ -193,10 +198,10 @@ if __name__ == "__main__":
             N_i = [i for i in range(obs)]
             for N_j in range(obs):
                 # print("N_J", N_j)
-                if not os.path.exists(os.path.join(data_path, "Spk64_2m_Data_volume_obs_-1_diag_weight_0_5", f"J_{N_j}_{N_j}_{obs}_observed_{int(dp*2000000)}_data_no_basis.txt")):
+                if not os.path.exists(os.path.join(data_path, "Spk64_2m_Data_volume_obs_-1_diag_EI_network_weight_4", f"J_{N_j}_{N_j}_{obs}_observed_{int(dp*2000000)}_data_no_basis.txt")):
                     print(f"J_{N_j}_{N_j}_{obs}_observed_{int(dp*2000000)}", "doesn't exists")
                     # break
-                    inferred_no_basis = infer_J_ij(spk_train.spike_train, N_i, N_j, data_percent=dp, with_basis=False, save=True, observed_neurons=range(obs), tol=1e-8, dir_name="Spk64_2m_Data_volume_obs_-1_diag_weight_0_5")
+                    inferred_no_basis = infer_J_ij(spk_train.spike_train, N_i, N_j, data_percent=dp, with_basis=False, save=True, observed_neurons=range(obs), tol=1e-8, dir_name="Spk64_2m_Data_volume_obs_-1_diag_EI_network_weight_4")
 
 
 
