@@ -189,9 +189,9 @@ def plot_correlation(cov_path="/home/tong/hidden-neuron-simulation/data/2022-10-
 #         else:
         axs[j//2, j%2].set_ylim(ylim)
         axs[j//2, j%2].set_xticklabels([f"{i/64:.0%}" for i in [2, 4, 8, 16, 32, 48, 64]])
-        axs[j//2, j%2].text(-0.2, 0.08+ylim[0], f"Spike train data volume: {int(dp*total_data)}", size=9)
-        axs[j//2, j%2].text(-0.1, 1.0, string.ascii_uppercase[j], transform=axs[j//2, j%2].transAxes,
-                             size=12, weight='bold')
+#         axs[j//2, j%2].text(-0.2, 0.02+ylim[0], f"Spike train data volume: {int(dp*total_data)}", size=9)
+#         axs[j//2, j%2].text(-0.1, 1.0, string.ascii_uppercase[j], transform=axs[j//2, j%2].transAxes,
+#                              size=12, weight='bold')
     #     if j//2 == 2:
     #         axs[j//2, j%2].set_xlabel("Percentage of Neuron Observed")
         corr_per_dp_median.append([np.median(corr) for corr in corr_per_observed.values()])
@@ -222,8 +222,8 @@ def plot_correlation(cov_path="/home/tong/hidden-neuron-simulation/data/2022-10-
 
     # axs[2,1].set_title("Correlation of inferred filter and spike train correlation", size=10)
     # plt.colorbar(im, ticks=np.linspace(0.75, 1, 11), ax=axs[2,1])
-    fig.text(0.05, 0.5, "Correlation between spike train autocorrelation and MLE inferred self-coupling filters", va='center', rotation='vertical', size=12)
-    fig.text(0.5, 0.08, "Percentage of Neuron Observed", ha='center', size=12)
+#     fig.text(0.05, 0.5, "Correlation between spike train autocorrelation and MLE inferred self-coupling filters", va='center', rotation='vertical', size=12)
+#     fig.text(0.5, 0.08, "Percentage of Neuron Observed", ha='center', size=12)
     if savefig:
         fig.savefig(f'./Figures/{fig_name}', bbox_inches="tight")
         print(f"figure saved at './Figures/{fig_name}'!")
@@ -261,3 +261,24 @@ def plot_corr_dp():
         plt.show()
         corr_per_dp_median.append([np.median(corr) for corr in corr_per_observed.values()])
         corr_per_dp_mean.append([np.mean(corr) for corr in corr_per_observed.values()])
+        
+        
+if __name__ == "__main__":
+    plot_correlation(cov_path="/home/tong/hidden-neuron-simulation/data/Spk64_2m_Data_volume_obs_-1_diag_covariance_EI_network_weight_7", \
+                 filter_path="/home/tong/hidden-neuron-simulation/data/Spk64_2m_Data_volume_obs_-1_diag_EI_network_weight_7", \
+                 filter_type="self-coupling", \
+                 data_volume_percent=[0.2, 0.4, 0.6, 0.8, 1], \
+                # data_volume_percent=[1], \
+                 total_data=2000000,\
+                 ylim=[0, 1.03], \
+                 fig_name="self_coupling_correlation_2m_-1_diag_EI_weight_7_new.pdf", \
+                 savefig=True)
+    plot_correlation(cov_path="/home/tong/hidden-neuron-simulation/data/Spk64_2m_Data_volume_obs_-1_diag_covariance_EI_network_weight_7", \
+                 filter_path="/home/tong/hidden-neuron-simulation/data/Spk64_2m_Data_volume_obs_-1_diag_EI_network_weight_7", \
+                 filter_type="cross-coupling-random", \
+                 data_volume_percent=[0.2, 0.4, 0.6, 0.8, 1], \
+                #  data_volume_percent=[1], \
+                 total_data=2000000,\
+                 ylim=[0, 1.03], \
+                 fig_name="cross_coupling_correlation_2m_-1_diag_EI_weight_7_new.pdf", \
+                 savefig=True)

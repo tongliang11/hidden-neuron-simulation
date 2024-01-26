@@ -4,7 +4,7 @@ import numpy as np
 
 
 class Spike_train:
-    def __init__(self, N, Nt, dt, p=0.2, W=None, weight_factor=1):
+    def __init__(self, N, Nt, dt, p=0.2, W=None, weight_factor=1, nonlinear="exp"):
         self.N = N
         self.Nt = Nt
         self.dt = dt
@@ -16,6 +16,8 @@ class Spike_train:
             self.weight_matrix = W
         self.spike_train = None
         self.spike_time = None
+        self.nonlinear = nonlinear
+        assert self.nonlinear in ["exp", "sigmoid"], "nonlinear activation function has to be either exp or sigmoid"
 
     def simulate_poisson(self, Nt=None, b=-1, tau=1.0):
         """
@@ -81,8 +83,10 @@ class Spike_train:
             #     l = 0
             # s_exact=np.sum([[spk[j,k]*alpha((i-j)*dt) for j in range(l,i)] for k in range(N)],1)
             input_s[i-1] = W@s+b
-
-            rate = np.exp(input_s[i-1])*dt
+            if self.nonlinear == "exp":
+                rate = np.exp(input_s[i-1])*dt
+            elif self.nonlinear == "sigmoid":
+                rate = dt / (1 + np.exp(- input_s[i-1]))
             # rate = softplus(input_s[i-1])*dt
             spk[i] = np.random.poisson(rate, size=(self.N,))
             r_vec[i] = rate

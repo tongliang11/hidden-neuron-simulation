@@ -335,7 +335,7 @@ def get_weight_matrix_ExcInh_Cluster_N(parameters):
     pEI = parameters.pXX
     pIE = parameters.pXX
     pII = parameters.pXX
-    sigma = 0.1 / parameters.N
+    sigma = 100 / parameters.N
 
     wEEsub = wEE / ((1 / parameters.numClusters) + (1 - (1 / parameters.numClusters)) / WRatioE)  # Average weight for sub - clusters
     pEEsub = pEE / ((1 / parameters.numClusters) + (1 - (1 / parameters.numClusters)) / pRatioE)

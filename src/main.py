@@ -12,8 +12,8 @@ import scipy.io
 data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 fig_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "figs")
 
-def simulate_spk_train(N=100, Nt=1000000, baseline=-2, weight_matrix=None, weight_factor=2, filename=None, save=True):
-    spk_train = SPK(N=N, Nt=Nt, dt=0.1, p=0.5, weight_factor=weight_factor)
+def simulate_spk_train(N=100, Nt=1000000, baseline=-2, nonlinear="exp", weight_matrix=None, weight_factor=2, filename=None, save=True):
+    spk_train = SPK(N=N, Nt=Nt, dt=0.1, p=0.5, weight_factor=weight_factor, nonlinear=nonlinear)
     
     if weight_matrix is not None:
         spk_train.weight_matrix = weight_matrix
@@ -118,18 +118,22 @@ if __name__ == "__main__":
     # step 1: simulate spike train or load existing spk_train data
     if args.rerun:
         # weight = np.array([[0, 1], [-1, 0]])
-        # N, Nt = 64, 1000000
-        # spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b_-2_weight_2")
-        weight_matrix = np.loadtxt("/home/tong/hidden-neuron-simulation/src/E-I-network/e-i-weight_64.txt")
-        J0 = 4
+        N, Nt = 64, 2000000
+        # spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_64_2000000_b_-2_-1_diag_weight_1.5")
+        weight_matrix = np.loadtxt("/home/tong/hidden-neuron-simulation/src/E-I-network/e-i-weight_64_random.txt")
+        J0 = 1
         weight_matrix = J0 * weight_matrix
         np.fill_diagonal(weight_matrix, -1)
-        N, Nt = 64, 2000000
-        # J_0 = 0.037
-        # weight_matrix = np.ones((N, N))*J_0
-        print("weight matrix", weight_matrix)
+        N, Nt = 64, 4000000
+        for J_0 in [0.037*i for i in [1, 0.5, 0.25]]:
+#         J_0 = 0.037
+            weight_matrix = np.ones((N, N))*J_0
+            # weight_matrix = 2*spk_train.weight_matrix
+            # np.fill_diagonal(weight_matrix, -1)
+            print("weight matrix", weight_matrix)
+            spk_train = simulate_spk_train(N=N, Nt=Nt, weight_matrix=weight_matrix, baseline=-2, weight_factor=0, nonlinear="exp", filename=f"spk_train_{N}_{Nt}_b_-2_J_{J_0}_all2all_01172024")
         
-        spk_train = simulate_spk_train(N=N, Nt=Nt, weight_matrix=weight_matrix, baseline=-2, weight_factor=0, filename=f"spk_train_{N}_{Nt}_b_-2_-1_diag_EI_network_weight_{J0}")
+#         spk_train = simulate_spk_train(N=N, Nt=Nt, weight_matrix=weight_matrix, baseline=-2, weight_factor=0, nonlinear="exp", filename=f"spk_train_{N}_{Nt}_b_-2_-1_diag_EI_network_sigma_1_weight_{J0}")
         # spk_train.plot_raster(t_window=[7000,8000], savefig=True, fig_path="./src/Figures/e-i-raster.png")
         # m_new = scipy.io.loadmat('/home/tong/hidden-neuron-simulation/src/m_new.mat')['Mnew']   
         # for i in range(9, 10):
@@ -137,7 +141,8 @@ if __name__ == "__main__":
             # spk_train = simulate_spk_train(N=256, weight_matrix=m_new, Nt=200000, filename=f"spk_train_256_m_new_p06_{i}")
     else:
         N, Nt = 64, 1000000
-        spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b-2_weight_2")
+        # spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_{N}_{Nt}_b-2_weight_2")
+        spk_train = load_spk_train(N=N, Nt=Nt, filename=f"spk_train_64_2000000_b_-2_-1_diag_weight_1.5_sigmoid")
 
 
     firing_rate(spk_train.spike_train)

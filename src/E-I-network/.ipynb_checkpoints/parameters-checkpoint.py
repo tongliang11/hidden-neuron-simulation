@@ -43,3 +43,4 @@ class network_params:
         self.wIE = 0.33  # 0.30
         self.wII = 1.33  # 1.30
         self.m0 = 0.5  # 1.0
+        self.sigma = 0
